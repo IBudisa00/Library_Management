@@ -15,6 +15,7 @@ class Book
         virtual std::string getBookAuthor() = 0;
         virtual unsigned int getBookId() = 0;
         virtual void outputBookInfo() = 0;
+        virtual unsigned int getYear() = 0;
 };
 
 #endif // BOOK_H

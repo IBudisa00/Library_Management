@@ -1,7 +1,7 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-#define outputFileName "outputFile.txt"
+#define outputFileName "../outputFile.txt"
 
 // --- MAIN MENU COMMANDS ---
 #define EXIT 0

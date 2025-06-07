@@ -25,6 +25,7 @@ class BookImpl : public Book
         std::string getBookAuthor() override;
         unsigned int getBookId() override;
         void outputBookInfo() override;
+        unsigned int getYear() override;
 };
 
 #endif // BOOK_IMPL_H

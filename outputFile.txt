@@ -1,0 +1,7 @@
+1 | ClownFest | Author1 | crime | 1 | 1966
+2 | Book2 | Author2 | crime, triller | 1 | 2001
+3 | Book3 | Author3 | fantasy | 1 | 2022
+4 | Book4 | Author4 | romance | 1 | 1900
+5 | FinalBook | Author2 | romance, fantasy | 1 | 1999
+6 | Summer | Author1 | adventure | 0 | 2012
+7 | Fireplace | Author4 | romance, drama | 1 | 1982

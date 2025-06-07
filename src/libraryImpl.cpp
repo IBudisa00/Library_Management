@@ -3,12 +3,25 @@
 #include "../inc/define.h"
 #include "../inc/library.h"
 #include "../inc/libraryImpl.h"
+#include "../inc/helperFunctions.h"
 
+
+/**
+ * @brief Set ID's counter for library books.
+ * 
+ */
 LibraryImpl::LibraryImpl()
 {
     idCounter = 0;
 }
 
+/**
+ * @brief Constructor to populate library with books by
+ * parsing starting textual file. In case of any book which
+ * would have invalid data won't be added into library.
+ * 
+ * @param initFileName The string for a file name used to initialize starting library data.
+ */
 LibraryImpl::LibraryImpl(std::string initFileName)
 {
     std::ifstream initFile;
@@ -22,13 +35,13 @@ LibraryImpl::LibraryImpl(std::string initFileName)
     unsigned int year;
     bool bookAvailability;
     std::string target = " | ";
-    std::vector<std::string> words;  //sve pohranjeno iz linije rascjepano (znam raspored to navet u dokumentaciji)
+    std::vector<std::string> words;
     int start = 0;
     int last = 0;
     bool firstRun = true;
     bool lineBeingParsed = true;
     bool allowAddingBook =  true;
-    
+   
     idCounter = 0;
 
     if(initFileName.substr(initFileName.size() - 4) != ".txt")
@@ -37,7 +50,10 @@ LibraryImpl::LibraryImpl(std::string initFileName)
         exit(-1);
     }
     else
-        initFile.open(outputFileName, std::ios::in);
+    {
+        initFileName = "../" + initFileName;
+        initFile.open(initFileName, std::ios::in);
+    }
 
     if(initFile.is_open())
     {
@@ -60,7 +76,9 @@ LibraryImpl::LibraryImpl(std::string initFileName)
             words.push_back(lineText.substr(start));
             firstRun = true;
             lineBeingParsed = true;
-
+            start = 0;
+            last = 0;
+           
             for(int i = 0; i < words.size(); i++)
             {
                 if(i == 0)
@@ -104,9 +122,9 @@ LibraryImpl::LibraryImpl(std::string initFileName)
                 }
                 else if(i == 4)
                 {
-                    if(words[i] == "true")
+                    if(words[i] == "1")
                         bookAvailability = true;
-                    else if(words[i] == "false")
+                    else if(words[i] == "0")
                         bookAvailability = false;
                     else
                     {
@@ -123,13 +141,19 @@ LibraryImpl::LibraryImpl(std::string initFileName)
                     }
                     else
                     {
-                        year = std::stoi(words[i]);
+                        if(checkDigits(words[i]))
+                            year = std::stoi(words[i]);
+                        else
+                        {
+                            std::cout << "Error | Invalid character in year '" << year <<"'.\n";
+                            allowAddingBook = false;
+                        }
                         if(year > 2025)
                         {
                             std::cout << "You are moving through time. That book doesn't exist, yet.\n";
                             allowAddingBook = false;
                         }
-                    }   
+                    }  
                 }
             }
             id = getIdCounter(); // ovo je init pa moze tu doc bez provjere sto je free jer je ovo na pocetku tek
@@ -137,6 +161,9 @@ LibraryImpl::LibraryImpl(std::string initFileName)
                 m_books.push_back(new BookImpl(bookAuthor, bookTitle, true, bookGenres, id, year));
             else
                 allowAddingBook = true;
+               
+            words.clear();
+            bookGenres.clear();
         }
     }
     else
@@ -147,12 +174,17 @@ LibraryImpl::LibraryImpl(std::string initFileName)
     initFile.close();
 }
 
+/**
+ * @brief Destructor of library where before deleting library
+ * all data is sent to hardcoded output file.
+ * 
+ */
 LibraryImpl::~LibraryImpl()
 {
     std::ofstream outputFile;
-    
+   
     outputFile.open(outputFileName, std::ios::out | std::ios::trunc);
-    
+   
     if(outputFile.is_open())
     {
         for(auto book : m_books)
@@ -164,7 +196,8 @@ LibraryImpl::~LibraryImpl()
                 if(i != book->getGenre().size() - 1)
                     outputFile << ", ";
             }
-            outputFile << " | " << book->getAvailability() << std::endl;
+            outputFile << " | " << book->getAvailability();
+            outputFile << " | " << book->getYear() << std::endl;
         }
     }
     else
@@ -176,6 +209,11 @@ LibraryImpl::~LibraryImpl()
         delete book;
 }
 
+/**
+ * @brief Adding book into library, in case of ivalid
+ * data adding is cancelled and user is warned of issue.
+ * 
+ */
 void LibraryImpl::addBook()
 {
     std::string author;
@@ -184,7 +222,7 @@ void LibraryImpl::addBook()
     bool availability;
     std::vector<std::string> genres;
     unsigned int id;
-    unsigned int year;
+    std::string year;
     Book* newBook = NULL;
     bool genresBeingAdded = true;
     bool addGenre = true;
@@ -196,6 +234,21 @@ void LibraryImpl::addBook()
     std::cin >> bookTitle;
     std::cout << "\nYear: ";
     std::cin >> year;
+   
+    if(!checkDigits(year))
+    {
+        std::cout << "\nError | Invalid year.";
+        return;
+    }
+    else
+    {
+        if(std::stoi(year) > 2025)
+        {
+            std::cout << "\nError | Year unavailable.";
+            return;
+        }
+    }
+   
     std::cout << "\n*To stop adding genres type 'STOP'";
     while(genresBeingAdded)
     {
@@ -228,16 +281,26 @@ void LibraryImpl::addBook()
     {
         availability = true;
         acquireFreedId(id);
-        newBook = new BookImpl(author, bookTitle, availability, genres, id, year);
-        if(!newBook)
+        if(!genres.empty())
         {
-            std::cout << "Error | newBook = NULL. Unsuccessful adding of book.\n";
-            return;
+            newBook = new BookImpl(author, bookTitle, availability, genres, id, std::stoi(year));
+            if(!newBook)
+            {
+                std::cout << "Error | newBook = NULL. Unsuccessful adding of book.\n";
+                return;
+            }
+            m_books.push_back(newBook);
         }
-        m_books.push_back(newBook);
+        else
+            std::cout << "Error | Genres category empty.\n";
     }
 }
 
+/**
+ * @brief Mark book's availability state to false if book
+ * is possible to be taken (availability is true at that moment).
+ * 
+ */
 void LibraryImpl::takeBook()
 {
     std::string bookTitle;
@@ -248,10 +311,21 @@ void LibraryImpl::takeBook()
     for(auto book : m_books)
     {
         if(book->getBookTitle() == bookTitle)
-            book->setAvailabilityState(false);
+        {
+            if(book->getAvailability())
+                book->setAvailabilityState(false);
+            else
+                std::cout << "\nBook is not available at the moment.";
+            return;
+        }
     }
 }
 
+/**
+ * @brief Mark book's availability state as true if
+ * previous state was true.
+ * 
+ */
 void LibraryImpl::returnBook()
 {
     std::string bookTitle;
@@ -262,11 +336,18 @@ void LibraryImpl::returnBook()
     for(auto book : m_books)
     {
         if(book->getBookTitle() == bookTitle)
+        {    
             book->setAvailabilityState(true);
+            std::cout << "Book '" << bookTitle << "' returned.\n";
+            return;
+        }
     }
-    std::cout << "Book '" << bookTitle << "' returned.\n";
 }
 
+/**
+ * @brief Printing all books data contained in library.
+ * 
+ */
 void LibraryImpl::outputLibraryList()
 {
     for(auto book : m_books)
@@ -275,34 +356,60 @@ void LibraryImpl::outputLibraryList()
     }
 }
 
+/**
+ * @brief Print data for book specified by user defined
+ * name of wanted book. In case of no data being found user
+ * is warned about it.
+ * 
+ * @param bookName String presenting book title.
+ * @param outputBookInfo optional bool value to output data of certain book.
+ */
 void LibraryImpl::checkBookByName(std::string bookName, bool outputBookInfo)
 {
+    bool foundSomething = false;
     for(auto book : m_books)
     {
         if(book->getBookTitle() == bookName)
         {
             if(outputBookInfo)
                 book->outputBookInfo();
+            foundSomething = true;
         }
     }
-    if(outputBookInfo)
+    if(outputBookInfo && !foundSomething)
         std::cout << "\nBook doesn't exist in library.";
 }
 
+/**
+ * @brief Print books by certain author specified by user.
+ * In case of no data being found user is warned about it.
+ * 
+ * @param authorName String presenting author's name.
+ * @param outputBookInfo optional bool value to output data of certain book.
+ */
 void LibraryImpl::checkBookByAuthor(std::string authorName, bool outputBookInfo)
 {
+    bool foundSomething = false;
     for(auto book : m_books)
     {
         if(book->getBookAuthor() == authorName)
         {
             if(outputBookInfo)
                 book->outputBookInfo();
+            foundSomething = true;
         }
     }
-    if(outputBookInfo)
+    if(outputBookInfo && !foundSomething)
         std::cout << "\nAuthor has no records in library.";
 }
 
+/**
+ * @brief Print book's data defined by unique ID specified by user.
+ * In case of no data being found user is warned about it.
+ * 
+ * @param bookId unsigned int presenting book's unique ID.
+ * @param outputBookInfo optional bool value to output data of certain book.
+ */
 void LibraryImpl::checkBookById(unsigned int bookId, bool outputBookInfo)
 {
     for(auto book : m_books)
@@ -318,6 +425,12 @@ void LibraryImpl::checkBookById(unsigned int bookId, bool outputBookInfo)
         std::cout << "\nBook with ID " << bookId << " doesn't exist in library.";
 }
 
+/**
+ * @brief Checks if unique ID is composed only out of digits.
+ * 
+ * @param idValue As a string to be checked.
+ * @return true if the string contains only digits, false otherwise.
+ */
 bool LibraryImpl::checkIdValidity(std::string& idValue)
 {
     for(auto& number : idValue)
@@ -328,12 +441,24 @@ bool LibraryImpl::checkIdValidity(std::string& idValue)
     return true;
 }
 
+/**
+ * @brief Get ID counter at the moment. Increments counter to be
+ * ready for next book that is going to be added.
+ * 
+ * @return int value of incremented ID which is used for next book.
+ */
 int LibraryImpl::getIdCounter()
 {
     idCounter++;
     return idCounter;
 }
 
+/**
+ * @brief Delete book specified by author's name and book title.
+ * In case of book composed of that data combination not existing
+ * user is warned about failed removal.
+ * 
+ */
 void LibraryImpl::deleteBook()
 {
     std::string author;
@@ -354,9 +479,16 @@ void LibraryImpl::deleteBook()
             return;
         }
     }
-    std::cout << "\nBook '" << bookTitle << "' by author " << author << " doesn't exist."; 
+    std::cout << "\nBook '" << bookTitle << "' by author " << author << " doesn't exist.";
 }
 
+/**
+ * @brief Check if book defined by author's name and title exists.
+ * 
+ * @param author name stored as string.
+ * @param title of a book as string.
+ * @return true if the book of specified author exists, false otherwise.
+ */
 bool LibraryImpl::checkIfBookExists(std::string author, std::string title)
 {
     for(auto book : m_books)
@@ -367,6 +499,13 @@ bool LibraryImpl::checkIfBookExists(std::string author, std::string title)
     return false;
 }
 
+/**
+ * @brief Get next available ID and store it into function parameter.
+ * If there is already deleted book's ID available that ID will be used,
+ * otherwise next ID in line is acquired.
+ * 
+ * @param freeId unsigned int as reference used to acquire available ID.
+ */
 void LibraryImpl::acquireFreedId(unsigned int& freeId)
 {
     if(freedIds.empty())

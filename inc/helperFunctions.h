@@ -5,5 +5,6 @@
 
 void printMenu();
 void searchBookHandler(Library* lib);
+bool checkDigits(std::string& number);
 
 #endif // HELPER_FUNCTIONS_H

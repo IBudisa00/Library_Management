@@ -9,12 +9,22 @@ bool programRunning = true;
 
 int main (int argc, char *argv[])
 {
-    Library* library = new LibraryImpl();
+    Library* library;
     int command;
 
-    printMenu();
+    if(argc == 1)
+        library = new LibraryImpl(outputFileName);
+    else if(argc == 2)
+        library = new LibraryImpl(argv[1]);
+    else
+    {
+        std::cout << "Invalid number of arguments. Exiting..."<<std::endl;
+        return -1;
+    }
+
     while(programRunning)
     {
+        printMenu();
         std::cin >> command;
         
         switch(command)
